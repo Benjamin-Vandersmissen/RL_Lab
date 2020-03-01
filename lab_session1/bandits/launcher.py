@@ -34,8 +34,20 @@ def run_bandit(agent, kbandit, max_steps) -> (np.array, np.array):
                 For computing the mean afterwards, best_action can be an array
                 of ones and zeros rather than actual booleans.
     """
-    # TODO: implement this function.
-    return perf, best_action
+    agent.reset()
+    kbandit.reset()
+
+    perf = []
+    best_action = []
+    for i in range(max_steps):
+        a = agent.act()
+        r = kbandit.pull(a)
+        agent.learn(a, r)
+        perf.append(r)
+        means = [bandit.m for bandit in kbandit.bandits]
+        best_action.append(a == means.index(max(means)))
+
+    return np.array(perf), np.array(best_action)
 
 def run_multiple_bandits(n_runs, **kwargs) -> (np.array, np.array):
     """
@@ -131,7 +143,7 @@ config = {
     'q0': 1
 }
 
-n_runs = 2000
+n_runs = 1000
 max_steps = 1000
 
 ## RUNNING =====================================================================
@@ -160,7 +172,7 @@ elif launch_type == 'spectrum':
     agent = UCB(**config)
     spectrum =  ['c', [0.25,0.5,1,2]]
     # finally, running:
-    perfs, best_actions = run_spectrum(spectrum, agent=agent, kbandit=kbandit, n_runs=n_runs, max_steps=max_steps
+    perfs, best_actions = run_spectrum(spectrum, agent=agent, kbandit=kbandit, n_runs=n_runs, max_steps=max_steps)
     # You can change the labels, title and file_name
     labels = ['{}={}'.format(spectrum[0], value) for value in spectrum[1]]
     file_name = 'plots/{}_study'.format(spectrum[0])

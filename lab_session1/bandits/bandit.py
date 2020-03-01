@@ -37,25 +37,62 @@ class Bandit(object):
         raise NotImplementedError("Calling method pull() in Abstract class Bandit")
 
 
-class Gaussian_Bandit:
-    # TODO: implement this class following the formalism above.
+class Gaussian_Bandit(Bandit):
     # Reminder: the Gaussian_Bandit's distribution is a fixed Gaussian.
-    pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.m = np.random.normal(0, 1)
 
-class Gaussian_Bandit_NonStat:
-    # TODO: implement this class following the formalism above.
+    def reset(self):
+        self.m = np.random.normal(0, 1)
+
+    def pull(self) -> float:
+        return np.random.normal(self.m, 1)
+
+class Gaussian_Bandit_NonStat(Gaussian_Bandit):
     # Reminder: the distribution mean changes each step over time,
     # with increments following N(m=0,std=0.01)
-    pass
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orig_m = self.m
+
+    def reset(self):
+        super().reset()
+        self.m = self.orig_m
+
+    def update(self):
+        self.m += np.random.normal(0, 0.01)
+
+    def pull(self) -> float:
+        return np.random.normal(self.m, 1)
 
 class KBandit:
-    # TODO: implement this class following the formalism above.
     # Reminder: The k-armed Bandit is a set of k Bandits.
     # In this case we mean for it to be a set of Gaussian_Bandits.
-    pass
+
+    def __init__(self, **kwargs):
+        self.bandits = [Gaussian_Bandit() for i in range(kwargs['k'])]
+
+    def reset(self):
+        for bandit in self.bandits:
+            bandit.reset()
+
+    def pull(self, i) -> float:
+        return self.bandits[i].pull()
 
 
-class KBandit_NonStat:
-    # TODO: implement this class following the formalism above.
+class KBandit_NonStat(KBandit):
     # Reminder: Same as KBandit, with non stationary Bandits.
-    pass
+
+    def __init__(self, **kwargs):
+        self.bandits = [Gaussian_Bandit_NonStat() for i in range(kwargs['k'])]
+
+    def pull(self, i) -> float:
+        r = super().pull(i)
+        for bandit in self.bandits : bandit.update()
+        return r
+
+    def reset(self):
+        for bandit in self. bandits:
+            bandit.reset()

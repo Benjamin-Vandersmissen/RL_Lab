@@ -7,6 +7,7 @@ An example can be seen on the Bandit_Agent and Random_Agent classes.
 """
 # -*- coding: utf-8 -*-
 import numpy as np
+import math
 from utils import softmax, my_random_choice
 
 class Bandit_Agent(object):
@@ -78,32 +79,120 @@ class Random_Agent(Bandit_Agent):
         return np.random.randint(self.k)
 
 
-class EpsGreedy_SampleAverage:
-    # TODO: implement this class following the formalism above.
+class EpsGreedy_SampleAverage(Bandit_Agent):
     # This class uses Sample Averages to estimate q; others are non stationary.
-    pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.averages = self.k*[0]
+        self.eps = kwargs['eps']
+        self.counts = self.k*[0]
+
+    def reset(self):
+        self.averages = self.k*[0]
+        self.counts = self.k*[0]
+
+    def learn(self, a:int, r:float):
+        self.counts[a] += 1
+        self.averages[a] += 1/self.counts[a]*(r - self.averages[a])
+
+    def act(self) -> int:
+        if np.random.uniform(0, 1) <= self.eps:
+            return np.random.random_integers(0, self.k-1)
+        else:
+            max_score = max(self.averages)
+            return self.averages.index(max_score)
 
 
-class EpsGreedy:
-    # TODO: implement this class following the formalism above.
+class EpsGreedy(Bandit_Agent):
     # Non stationary agent with q estimating and eps-greedy action selection.
-    pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.averages = self.k * [0]
+        self.eps = kwargs['eps']
+        self.alpha = kwargs['lr']
+        self.counts = self.k * [0]
+
+    def reset(self):
+        self.averages = self.k * [0]
+        self.counts = self.k * [0]
+
+    def learn(self, a: int, r: float):
+        self.counts[a] += 1
+        self.averages[a] += self.alpha * (r - self.averages[a])
+
+    def act(self) -> int:
+        if np.random.uniform(0, 1) <= self.eps:
+            return np.random.random_integers(0, self.k - 1)
+        else:
+            max_score = max(self.averages)
+            return self.averages.index(max_score)
 
 
-class OptimisticGreedy:
-    # TODO: implement this class following the formalism above.
+class OptimisticGreedy(EpsGreedy_SampleAverage):
     # Same as above but with optimistic starting values.
-    pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.q0 = kwargs['q0']
+        self.averages = self.k * [self.q0]  # set averages to the optimistic value
+        self.eps = 0
+
+    def reset(self):
+        self.averages = self.k * [self.q0]
+
+class UCB(Bandit_Agent):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.counts = self.k * [0]
+        self.averages = self.k * [0]
+        self.alpha = kwargs['alpha']
+        self.c = kwargs['c']
+        self.time = 1
+
+    def reset(self):
+        self.counts = self.k * [0]
+        self.averages = self.k * [0]
+        self.time = 1
+
+    def learn(self, a:int, r:float):
+        self.counts[a] += 1
+        self.averages[a] += self.alpha * (r - self.averages[a])
+
+    def act(self) -> int:
+        values = [self.averages[a] + self.c*math.sqrt(math.log(self.time)/self.counts[a]) if (self.counts[a] != 0) else np.inf for a in range(self.k)]
+        return values.index(max(values))
 
 
-class UCB:
-    # TODO: implement this class following the formalism above.
-    pass
 
+class Gradient_Bandit(Bandit_Agent):
+    # TODO: Fix
 
-class Gradient_Bandit:
-    # TODO: implement this class following the formalism above.
     # If you want this to run fast, use the my_random_choice function from
     # utils instead of np.random.choice to sample from the softmax
     # You can also find the softmax function in utils.
-    pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.preferences = self.k * [0]
+        self.sum_reward = 0
+        self.count = 0
+        self.alpha = kwargs['alpha']
+        self.probas = self.k*[1/self.k]
+
+    def reset(self):
+        self.sum_reward = 0
+        self.count = 0
+        self.probas = self.k * [1/self.k]
+        self.preferences = self.k * [0]
+
+    def learn(self, a:int, r:float):
+        self.count += 1
+        self.sum_reward += r
+        avg_reward = self.sum_reward/self.count
+        d_reward = (r-avg_reward)
+        self.preferences = [self.preferences[i] - self.alpha*d_reward*self.probas[i] if (i != a)
+                            else self.preferences[i] + self.alpha*d_reward*(1-self.probas[i])
+                            for i in range(self.k)]
+
+    def act(self) -> int:
+        self.probas = softmax(self.preferences)
+        return my_random_choice(self.k, self.probas)
