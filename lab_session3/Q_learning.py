@@ -8,14 +8,14 @@ from gym.envs.registration import register
 
 # code to set a gym config
 # 4x4 environment
-kwargs = {'map_name': '4x4', 'is_slippery': False}
+# kwargs = {'map_name': '4x4', 'is_slippery': False}
 # 8x8 environment
-# kwargs = {'map_name': '8x8', 'is_slippery': True}
+kwargs = {'map_name': '8x8', 'is_slippery': True}  # is_slippery -> Non-deterministic
 register(
     id='FrozenLakeNotSlippery-v0',
     entry_point='gym.envs.toy_text:FrozenLakeEnv',
     kwargs=kwargs,
-    max_episode_steps=100,
+    max_episode_steps=2000,
     reward_threshold=0.8196
 )
 
@@ -25,13 +25,11 @@ env = gym.make("FrozenLakeNotSlippery-v0")
 
 # actions
 action_size = env.action_space.n
-# statess
+# states
 state_size = env.observation_space.n
 
 
-# TODO Declare your q-table based on number of states and actions.
-
-qtable = 
+qtable = np.ndarray((state_size, action_size))
 
 
 class Agent(object):
@@ -50,25 +48,23 @@ class Agent(object):
         """
         self.qtable = qtable
         self.learning_rate = 0.1           # Learning rate
-        self.gamma = 0.95                  # Discounting rate
+        self.gamma = 0.98                  # Discounting rate
 
         # Exploration parameters
         self.epsilon = 1.0                 # Exploration rate
         self.max_epsilon = 1.0             # Exploration probability at start
-        self.min_epsilon = 0.01            # Minimum exploration probability
-        self.decay_rate = 0.001             # Exponential decay rate for exploration prob
+        self.min_epsilon = 0.1            # Minimum exploration probability
+        self.decay_rate = 0.0001             # Exponential decay rate for exploration prob
 
-    def act(self, state, exp_exp_tradeoff):
+    def act(self, state):
         """
-        Function where agent acts.
+        Function where agent acts with policy eps-greedy.
+        Epsilon is updated outside this method.
 
         Parameters
         ----------
         state: numpy int64
             current state of the environment
-
-        exp_exp_tradeoff: float
-            exploration and exploitation tradeoff
 
         Returns
         -------
@@ -76,7 +72,10 @@ class Agent(object):
             action to take
 
         """
-        # TODO Write code to check if your agent wants to explore or exploit
+        if np.random.uniform(0, 1) <= self.epsilon:  # explore
+            return random.randint(0, action_size-1)
+        else:
+            return np.argmax(self.qtable[state])
 
     def learn(self, state, action, reward, new_state):
         """
@@ -97,7 +96,7 @@ class Agent(object):
             new state after action
 
         """
-        #TODO Write code to update q-table
+        self.qtable[state, action] += self.learning_rate * (reward + self.gamma*np.max(self.qtable[new_state]) - self.qtable[state, action])
 
     def update_epsilon(self, episode):
         """
@@ -131,8 +130,8 @@ class Trainer(object):
 
         """
         # config of your run.
-        self.total_episodes = 20000        # Total episodes
-        self.max_steps = 99                # Max steps per episode
+        self.total_episodes = 200000        # Total episodes
+        self.max_steps = 2000                # Max steps per episode
 
         # q-table
         self.qtable = qtable
@@ -163,7 +162,7 @@ class Trainer(object):
                 exp_exp_tradeoff = random.uniform(0, 1)
 
                 # take an action
-                action = self.agent.act(state, exp_exp_tradeoff)
+                action = self.agent.act(state)
 
                 # get feedback from environment
                 new_state, reward, done, info = env.step(action)
@@ -185,7 +184,7 @@ class Trainer(object):
             episode += 1
 
             # update your exploration rate
-            agent.update_epsilon(episode)
+            self.agent.update_epsilon(episode)
 
             # global reward
             rewards.append(self.total_rewards)
@@ -193,11 +192,11 @@ class Trainer(object):
         # print your scores
         print("Score over time: " + str(sum(rewards)/self.total_episodes))
 
-        # print the qtable
-        print(self.agent.qtable)
-
-        # printing epsilon
-        print(self.agent.epsilon)
+        # # print the qtable
+        # print(self.agent.qtable)
+        #
+        # # printing epsilon
+        # print(self.agent.epsilon)
 
         return self.qtable
 
@@ -211,7 +210,7 @@ def test():
         done = False
         print("*****************************")
         print("EPISODE ", episode)
-        for step in range(99):
+        for step in range(2000):
             env.render()
             # Take the action (index) that have the maximum expected future reward given that state
             action = np.argmax(qtable[state, :])
@@ -219,7 +218,8 @@ def test():
             new_state, reward, done, info = env.step(action)
             print(reward)
             if done:
-                print('\n \x1b[6;30;42m' + 'Success!' + '\x1b[0m')
+                if reward == 1:
+                    print('\n \x1b[6;30;42m' + 'Success!' + '\x1b[0m')
                 action = np.argmax(qtable[state, :])
                 print(action)
                 env.render()
