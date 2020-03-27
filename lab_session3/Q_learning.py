@@ -4,7 +4,23 @@ import random
 
 from gym.envs.registration import register
 
+def allmax(a):
+    """ Returns all occurences of the max """
+    if len(a) == 0:
+        return []
+    all_ = [0]
+    max_ = a[0]
+    for i in range(1, len(a)):
+        if a[i] > max_:
+            all_ = [i]
+            max_ = a[i]
+        elif a[i] == max_:
+            all_.append(i)
+    return all_
 
+def my_argmax(v):
+    """ Breaks ties randomly. """
+    return random.choice(allmax(v))
 
 # code to set a gym config
 # 4x4 environment
@@ -29,8 +45,7 @@ action_size = env.action_space.n
 state_size = env.observation_space.n
 
 
-qtable = np.ndarray((state_size, action_size))
-
+qtable = np.zeros((state_size, action_size))
 
 class Agent(object):
     """
@@ -72,10 +87,10 @@ class Agent(object):
             action to take
 
         """
-        if np.random.uniform(0, 1) <= self.epsilon:  # explore
-            return random.randint(0, action_size-1)
+        if np.random.rand() < self.epsilon:
+            return np.random.randint(action_size)
         else:
-            return np.argmax(self.qtable[state])
+            return my_argmax(self.qtable[state])
 
     def learn(self, state, action, reward, new_state):
         """
@@ -97,6 +112,7 @@ class Agent(object):
 
         """
         self.qtable[state, action] += self.learning_rate * (reward + self.gamma*np.max(self.qtable[new_state]) - self.qtable[state, action])
+
 
     def update_epsilon(self, episode):
         """
