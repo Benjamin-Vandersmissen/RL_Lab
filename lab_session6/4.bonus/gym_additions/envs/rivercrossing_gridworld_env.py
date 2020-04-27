@@ -18,6 +18,8 @@ class RiverCrossingEnv(gym.Env):
                 2: (1, 0),   # down
                 3: (0, -1),  # left
                 }
+        self.start = (self.height-1, 0)
+        self.state = self.start
 
     def reset(self):
         """
@@ -27,9 +29,8 @@ class RiverCrossingEnv(gym.Env):
         state : State
             First state of the episode.
         """
-        # TODO: Implement this
-        raise NotImplementedError()
-        return state
+        self.state = self.start
+        return self.start
 
     def step(self, action):
         """
@@ -51,12 +52,50 @@ class RiverCrossingEnv(gym.Env):
             ignore this
         """
         # TODO: code here
-        raise NotImplementedError()
-        return next_state, reward, done, info
+        y, x = self.state
+        dy, dx = self.moves[action]
+        next_x, next_y = x+dx, y+dy
+
+        next_x = np.clip(next_x, 0, self.width-1)  # clip the values to the world
+        next_y = np.clip(next_y, 0, self.height-1) # clip the values to the world
+
+        if next_y == 1:
+            rand = np.random.uniform()
+            if rand < 0.2:
+                next_x += 1
+            elif rand < 0.7:
+                next_x += 2
+            else:
+                next_x += 3
+
+            next_x = np.clip(next_x, 0, self.width - 1)
+
+        if next_x == 4 and next_y == 1:
+            reward = -1
+            done = True
+        elif next_x == 4 and next_y == 2:
+            reward = 1
+            done = True
+        else:
+            reward = 0
+            done = False
+
+        next_state = (next_y, next_x)
+        self.state = next_state
+
+        return next_state, reward, done, {}
 
     def render(self):
         """
         Optional.
         Prints the environment for visualization.
         """
-        pass
+        grid = [[' ', ' ', ' ', ' ', '+'],
+                ['R', 'R', 'R', 'R', '-'],
+                [' ', ' ', ' ', ' ', ' ']]
+
+        y, x = self.state
+
+        grid[y][x] = 'X'
+        for row in grid:
+            print(row)

@@ -44,6 +44,30 @@ class ValueIterationAgent(ValueEstimationAgent):
         self.iterations = iterations
         self.values = util.Counter() # A Counter is a dict with default 0
 
+        delta = 0.01
+
+        for iteration in range(self.iterations):
+            temp_values = util.Counter()
+            l2_distance = 0
+            for state in self.mdp.getStates():
+                value = -np.inf
+                if mdp.isTerminal(state):
+                    temp_values[state] = 0
+                    continue
+                for action in mdp.getPossibleActions(state):
+                    list = mdp.getTransitionStatesAndProbs(state, action)
+                    tmp_value = 0
+                    for pair in list:
+                        tmp_value += pair[1] * (mdp.getReward(state, action, pair[0]) + self.discount * self.values[pair[0]])
+                    value = max(value, tmp_value)
+                temp_values[state] = value
+                l2_distance = max(l2_distance, np.linalg.norm(value - self.values[state]))
+
+            if l2_distance < delta:
+                print(iteration)
+                break
+            self.values = temp_values
+
         # TODO: Implement Value Iteration.
         # Exit either when the number of iterations is reached,
         # OR until convergence (L2 distance < delta).
@@ -61,9 +85,10 @@ class ValueIterationAgent(ValueEstimationAgent):
           Compute the Q-value of action in state from the
           value function stored in self.values.
         """
-        # TODO: Implement this function according to the doc
-        util.raiseNotDefined()
-
+        # TODO: Implement this function according to the docs
+        list = self.mdp.getTransitionStatesAndProbs(state, action)
+        state = list[0][0]
+        return self.values[state]
 
     def computeActionFromValues(self, state):
         """
@@ -75,7 +100,19 @@ class ValueIterationAgent(ValueEstimationAgent):
           terminal state, you should return None.
         """
         # TODO: Implement according to the doc
-        util.raiseNotDefined()
+        if self.mdp.isTerminal(state):
+            return None
+        current_action = ""
+        current_value = -np.inf
+
+        for action in self.mdp.getPossibleActions(state):
+            value = self.getQValue(state, action)
+            if value > current_value:
+                current_action = action
+                current_value = value
+
+        return current_action
+
 
     def getPolicy(self, state):
         return self.computeActionFromValues(state)

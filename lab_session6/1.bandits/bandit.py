@@ -36,7 +36,7 @@ class Bandit(object):
         """
         raise NotImplementedError("Calling method pull() in Abstract class Bandit")
 
-class Mixture_Bandit_NonStat:
+class Mixture_Bandit_NonStat(Bandit):
     """ A Mixture_Bandit_NonStat is a 2-component Gaussian Mixture
     reward distribution (sum of two Gaussians with weights w and 1-w in [O,1]).
 
@@ -45,7 +45,31 @@ class Mixture_Bandit_NonStat:
     The Gaussian mixture in non-stationary: the means AND WEIGHTS move every
     time-step by an increment epsilon~N(m=0,std=0.01)"""
     # TODO: Implement this class inheriting the Bandit above.
-    pass
+    def __init__(self):
+        super().__init__()
+        self.mean1 = np.random.normal()
+        self.mean2 = np.random.normal()
+
+        self.w1 = np.random.uniform(0, 1)
+
+    def reset(self):
+        self.mean1 = np.random.normal()
+        self.mean2 = np.random.normal()
+
+        self.w1 = np.random.uniform(0, 1)
+
+    def pull(self):
+        retvalue = self.w1 * np.random.normal(self.mean1, 1) + (1-self.w1) * np.random.normal(self.mean2, 1)
+
+        self.update()
+
+        return retvalue
+
+    def update(self):
+        self.mean1 += np.random.normal(0, 0.01)
+        self.mean2 += np.random.normal(0, 0.01)
+
+        self.w1 += np.random.normal(0, 0.01)
 
 
 class KBandit_NonStat:
@@ -59,4 +83,21 @@ class KBandit_NonStat:
     * a pull(lever) method to pull one of the Bandits; + non stationarity
     """
     # TODO: implement this class
-    pass
+    def __init__(self, k, **kwargs):
+        self.k = k
+        self.bandits = []
+        for i in range(k):
+            self.bandits.append(Mixture_Bandit_NonStat())
+
+        self.best_action = 0
+
+
+    def reset(self):
+        for bandit in self.bandits:
+            bandit.reset()
+
+    def pull(self, i):
+        results = [bandit.pull() for bandit in self.bandits]
+        self.best_action = np.argmax(results)
+
+        return results[i]

@@ -45,6 +45,54 @@ class PolicyIterationAgent(ValueEstimationAgent):
         self.values = util.Counter() # A Counter is a dict with default 0
 
         delta = 0.01
+
+        self.policy = dict()
+        total_iterations = 0
+        for _ in range(self.iterations):
+
+            for iteration in range(self.iterations):  # policy evaluation
+                temp_values = util.Counter()
+                l2_distance = 0
+                for state in self.mdp.getStates():
+                    if state not in self.policy:  # initialize random policy
+                        if not self.mdp.getPossibleActions(state):
+                            self.policy[state] = None
+                        else:
+                            self.policy[state] = np.random.choice(mdp.getPossibleActions(state))
+                    if mdp.isTerminal(state):
+                        temp_values[state] = 0
+                        continue
+                    list = mdp.getTransitionStatesAndProbs(state, self.policy[state])
+                    value = 0
+                    for pair in list:
+                        value += pair[1] * (mdp.getReward(state, self.policy[state], pair[0]) + self.discount * self.values[pair[0]])
+                    temp_values[state] = value
+                    l2_distance = max(l2_distance, np.linalg.norm(value - self.values[state]))
+
+                total_iterations += 1
+                self.values = temp_values
+                if l2_distance < delta:
+                    break
+
+
+            policy_converged = True
+            for state in self.mdp.getStates():  # policy improvement
+                if mdp.isTerminal(state):
+                    continue
+                current_value = self.computeQValueFromValues(state, self.policy[state])
+                current_action = self.policy[state]
+                for action in self.mdp.getPossibleActions(state):
+                    if self.computeQValueFromValues(state, action) > current_value:
+                        # print(current_action, current_value, action, self.computeQValueFromValues(state, action))
+                        current_value = self.computeQValueFromValues(state, action)
+                        current_action = action
+                        policy_converged = False
+                self.policy[state] = current_action
+            if policy_converged:
+                print(total_iterations)
+                break
+
+
         # TODO: Implement Policy Iteration.
         # Exit either when the number of iterations is reached,
         # OR until convergence (L2 distance < delta).
@@ -65,9 +113,9 @@ class PolicyIterationAgent(ValueEstimationAgent):
           Compute the Q-value of action in state from the
           value function stored in self.values.
         """
-        # TODO: Implement this function according to the doc
-        util.raiseNotDefined()
-
+        list = self.mdp.getTransitionStatesAndProbs(state, action)
+        state = list[0][0]
+        return self.values[state]
 
     def computeActionFromValues(self, state):
         """
@@ -78,8 +126,7 @@ class PolicyIterationAgent(ValueEstimationAgent):
           there are no legal actions, which is the case at the
           terminal state, you should return None.
         """
-        # TODO: Implement according to the doc
-        util.raiseNotDefined()
+        return self.policy[state]
 
     def getPolicy(self, state):
         return self.computeActionFromValues(state)

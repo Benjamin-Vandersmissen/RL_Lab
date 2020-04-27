@@ -78,13 +78,53 @@ class Random_Agent(Bandit_Agent):
         return np.random.randint(self.k)
 
 
-class EpsGreedy_SampleAverage:
+class EpsGreedy_SampleAverage(Bandit_Agent):
     # TODO: implement this class following the formalism above.
     # This class uses Sample Averages to estimate q; others are non stationary.
-    pass
+
+    def __init__(self, k, **kwargs):
+        super().__init__(k, **kwargs)
+        self.eps = kwargs['eps']
+        self.averages = self.k * [0]
+        self.counts = self.k * [0]
+
+    def reset(self):
+        self.averages = self.k * [0]
+        self.counts = self.k * [0]
+
+    def learn(self, a: int, r: float):
+        self.counts[a] += 1
+        self.averages[a] += 1 / self.counts[a] * (r - self.averages[a])
+
+    def act(self) -> int:
+        if np.random.uniform(0, 1) <= self.eps:
+            return np.random.random_integers(0, self.k - 1)
+        else:
+            max_score = max(self.averages)
+            return self.averages.index(max_score)
 
 
-class EpsGreedy_WeightedAverage:
-    # TODO: implement this class following the formalism above.
+
+class EpsGreedy_WeightedAverage(Bandit_Agent):
     # Non stationary agent with q estimating and eps-greedy action selection.
-    pass
+    def __init__(self, k, **kwargs):
+        super().__init__(k, **kwargs)
+        self.averages = self.k * [0]
+        self.eps = kwargs['eps']
+        self.alpha = kwargs['lr']
+        self.counts = self.k * [0]
+
+    def reset(self):
+        self.averages = self.k * [0]
+        self.counts = self.k * [0]
+
+    def learn(self, a: int, r: float):
+        self.counts[a] += 1
+        self.averages[a] += self.alpha * (r - self.averages[a])
+
+    def act(self) -> int:
+        if np.random.uniform(0, 1) <= self.eps:
+            return np.random.random_integers(0, self.k - 1)
+        else:
+            max_score = max(self.averages)
+            return self.averages.index(max_score)
