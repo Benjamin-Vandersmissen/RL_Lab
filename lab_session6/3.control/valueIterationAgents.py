@@ -45,6 +45,7 @@ class ValueIterationAgent(ValueEstimationAgent):
         self.values = util.Counter() # A Counter is a dict with default 0
 
         delta = 0.01
+<<<<<<< HEAD
 
         for iteration in range(self.iterations):
             temp_values = util.Counter()
@@ -68,6 +69,8 @@ class ValueIterationAgent(ValueEstimationAgent):
                 break
             self.values = temp_values
 
+=======
+>>>>>>> d00d5057d6ac8b04a3f737da09dbfae34a50aec3
         # TODO: Implement Value Iteration.
         # Exit either when the number of iterations is reached,
         # OR until convergence (L2 distance < delta).
